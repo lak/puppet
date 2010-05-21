@@ -9,7 +9,7 @@ Puppet::Type.type(:file).newparam(:checksum) do
 
     The default checksum parameter, if checksums are enabled, is md5."
 
-  newvalues "md5", "md5lite", "mtime", "ctime", "none"
+  newvalues "md5", "md5lite", "mtime", "ctime", "none", "git"
 
   defaultto :md5
 

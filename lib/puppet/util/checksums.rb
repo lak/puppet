@@ -12,6 +12,36 @@ module Puppet::Util::Checksums
     string =~ /^\{(\w{3,5})\}\S+/
   end
 
+  # Calculate a checksum using Digest::SHA1.
+  def git(content)
+    require 'digest/sha1'
+    digest = Digest::SHA1.new
+    digest << "blob "
+    digest << content.size.to_s
+    digest << "\0"
+    digest << content
+    digest.hexdigest
+  end
+
+  # Calculate a checksum of a file's content using Digest::SHA1.
+  def git_file(filename, lite = false)
+    require 'digest/sha1'
+
+    digest = Digest::SHA1.new()
+    digest << "blob "
+    digest << File.stat(filename).size.to_s
+    digest << "\0"
+    return checksum_file(digest, filename, lite)
+  end
+
+  def git_stream
+    raise "git_stream not supported (yet?)"
+    require 'digest/sha1'
+    digest = Digest::SHA1.new()
+    yield digest
+    return digest.hexdigest
+  end
+
   # Strip the checksum type from an existing checksum
   def sumdata(checksum)
     checksum =~ /^\{(\w+)\}(.+)/ ? $2 : nil

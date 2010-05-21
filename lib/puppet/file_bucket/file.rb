@@ -9,7 +9,7 @@ class Puppet::FileBucket::File
   # There is a compatibility class that emulates pre-indirector filebuckets in Puppet::FileBucket::Dipper
   extend Puppet::Indirector
   require 'puppet/file_bucket/file/indirection_hooks'
-  indirects :file_bucket_file, :terminus_class => :file, :extend => Puppet::FileBucket::File::IndirectionHooks
+  indirects :file_bucket_file, :terminus_class => :git, :extend => Puppet::FileBucket::File::IndirectionHooks
 
   attr :contents
   attr :bucket_path
