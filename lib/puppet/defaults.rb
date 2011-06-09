@@ -189,7 +189,8 @@ module Puppet
       performed work during the normal run."],
     :freeze_main => [false, "Freezes the 'main' class, disallowing any code to be added to it.  This
       essentially means that you can't have any code outside of a node, class, or definition other
-      than in the site manifest."]
+      than in the site manifest."],
+    :hiera_config => ["/etc/hiera.yaml", "Where to find hiera's configuration."]
   )
 
   hostname = Facter["hostname"].value

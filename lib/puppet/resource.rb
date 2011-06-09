@@ -26,6 +26,10 @@ class Puppet::Resource
 
   ATTRIBUTES = [:file, :line, :exported]
 
+  def self.hiera
+    @hiera ||= Hiera.new(:config => Puppet.settings[:hiera_config])
+  end
+
   def self.from_pson(pson)
     raise ArgumentError, "No resource type provided in pson data" unless type = pson['type']
     raise ArgumentError, "No resource title provided in pson data" unless title = pson['title']
@@ -355,9 +359,14 @@ class Puppet::Resource
         fail Puppet::DevError, "Cannot evaluate default parameters for #{self} - not a parser resource"
       end
 
-      next if default.nil?
+      default_value = default.nil? ? nil : default.safeevaluate(scope)
 
-      self[param] = default.safeevaluate(scope)
+      if Puppet.features.hiera?
+        default_value = self.class.hiera.lookup(param.to_s, default_value, scope)
+      end
+      next if default_value.nil?
+
+      self[param] = default_value
       result << param
     end
     result
