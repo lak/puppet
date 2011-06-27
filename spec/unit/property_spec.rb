@@ -44,10 +44,6 @@ describe Puppet::Property do
     end
   }
 
-  it "should be able to shadow metaparameters" do
-    @property.must respond_to(:shadow)
-  end
-
   describe "when returning the default event name" do
     before do
       @resource = stub 'resource'
@@ -143,31 +139,6 @@ describe Puppet::Property do
     it "should provide its path as the source description" do
       @instance.stubs(:path).returns "/my/param"
       @instance.event.source_description.should == "/my/param"
-    end
-  end
-
-  describe "when shadowing metaparameters" do
-    before do
-      @shadow_class = Class.new(Puppet::Property) do
-        @name = :alias
-      end
-      @shadow_class.initvars
-    end
-
-    it "should create an instance of the metaparameter at initialization" do
-      Puppet::Type.metaparamclass(:alias).expects(:new).with(:resource => @resource)
-
-      @shadow_class.new :resource => @resource
-    end
-
-    it "should munge values using the shadow's munge method" do
-      shadow = mock 'shadow'
-      Puppet::Type.metaparamclass(:alias).expects(:new).returns shadow
-
-      shadow.expects(:munge).with "foo"
-
-      property = @shadow_class.new :resource => @resource
-      property.munge("foo")
     end
   end
 
