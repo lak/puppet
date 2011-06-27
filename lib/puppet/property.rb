@@ -135,17 +135,6 @@ class Puppet::Property < Puppet::Parameter
     resource.event :name => event_name, :desired_value => should, :property => self, :source_description => path
   end
 
-  attr_reader :shadow
-
-  # initialize our property
-  def initialize(hash = {})
-    super
-
-    if ! self.metaparam? and klass = Puppet::Resource::Type.metaparamclass(self.class.name)
-      setup_shadow(klass)
-    end
-  end
-
   # Determine whether the property is in-sync or not.  If @should is
   # not defined or is set to a non-true value, then we do not have
   # a valid value for it and thus consider the property to be in-sync
@@ -209,13 +198,6 @@ class Puppet::Property < Puppet::Parameter
     self.class.array_matching == :all
   end
 
-  # Execute our shadow's munge code, too, if we have one.
-  def munge(value)
-    self.shadow.munge(value) if self.shadow
-
-    super
-  end
-
   # each property class must define the name method, and property instances
   # do not change that name
   # this implicitly means that a given object can only have one property
@@ -268,14 +250,6 @@ class Puppet::Property < Puppet::Parameter
       # do so in the block.
       devfail "Cannot use obsolete :call value '#{call}' for property '#{self.class.name}'"
     end
-  end
-
-  # If there's a shadowing metaparam, instantiate it now.
-  # This allows us to create a property or parameter with the
-  # same name as a metaparameter, and the metaparam will only be
-  # stored as a shadow.
-  def setup_shadow(klass)
-    @shadow = klass.new(:resource => self.resource)
   end
 
   # Only return the first value
