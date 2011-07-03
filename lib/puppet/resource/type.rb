@@ -87,7 +87,7 @@ class Puppet::Resource::Type
   RESOURCE_SUPERTYPES = [:hostclass, :node, :definition]
 
   attr_accessor :file, :line, :doc, :code, :ruby_code, :parent, :resource_type_collection
-  attr_reader :type, :namespace, :arguments, :behaves_like, :module_name
+  attr_reader :type, :namespace, :behaves_like, :module_name
 
   RESOURCE_SUPERTYPES.each do |t|
     define_method("#{t}?") { self.type == t }
@@ -101,6 +101,13 @@ class Puppet::Resource::Type
     name = data.delete('name') or raise ArgumentError, "Resource Type names must be specified"
     type = data.delete('type') || "definition"
 
+    # Don't reconstitute metaparams.
+    if arguments = data['arguments']
+      arguments.each { |arg, param|
+        arguments.delete(arg) if metaparam?(arg)
+      }
+    end
+
     data = data.inject({}) { |result, ary| result[ary[0].intern] = ary[1]; result }
 
     new(type, name, data)
@@ -113,7 +120,8 @@ class Puppet::Resource::Type
       hash
     end
 
-    data['arguments'] = arguments.dup unless arguments.empty?
+    arguments = parameters_with_defaults()
+    data['arguments'] = arguments unless arguments.empty?
 
     data['name'] = name
     data['type'] = type
@@ -267,13 +275,17 @@ class Puppet::Resource::Type
     end
   end
 
+  def metaparam?(name)
+    self.class.metaparam?(name)
+  end
+
   # Create a new parameter.  Requires a block and a name, stores it in the
   # @parameters array, and does some basic checking on it.
   def newparam(name, options = {}, &block)
     options[:attributes] ||= {}
 
-      param = genclass(
-        name,
+    param = genclass(
+      name,
       :parent => options[:parent] || Puppet::Parameter,
       :attributes => options[:attributes],
       :block => block,
@@ -346,6 +358,19 @@ class Puppet::Resource::Type
     @parameters.collect { |klass| klass.name }
   end
 
+  # Collect all parameters into a hash, with their defaults (if possible).
+  # This is primarily used for serialization.
+  def parameters_with_defaults
+    allattrs.inject({}) { |hash, name|
+      if param = paramclass(name) and d = param.default
+        hash[name.to_s] = d
+      else
+        hash[name.to_s] = nil
+      end
+      hash
+    }
+  end
+
   # Find the parameter class associated with a given parameter name.
   def paramclass(name)
     @paramhash[name]
@@ -380,15 +405,6 @@ class Puppet::Resource::Type
 
     set_name_and_namespace(name)
 
-    [:code, :doc, :line, :file, :parent].each do |param|
-      next unless value = options[param]
-      send(param.to_s + "=", value)
-    end
-
-    set_arguments(options[:arguments])
-
-    @module_name = options[:module_name]
-
     ### Old type stuff
     @aliases = Hash.new
 
@@ -414,7 +430,16 @@ class Puppet::Resource::Type
       end
     }
 
+    [:code, :doc, :line, :file, :parent].each do |param|
+      next unless value = options[param]
+      send(param.to_s + "=", value)
+    end
+
     @doc ||= ""
+
+    set_arguments(options[:arguments])
+
+    @module_name = options[:module_name]
   end
 
   # This is only used for node names, and really only when the node name
@@ -503,16 +528,11 @@ class Puppet::Resource::Type
 
   # Check whether a given argument is valid.
   def valid_parameter?(name)
-    name = symbolize(name)
-    return true if name == :name
-    @valid_parameters ||= {}
-
-    unless @valid_parameters.include?(name)
-      @valid_parameters[name] = !!(self.validproperty?(name) or self.validparameter?(name) or self.class.metaparam?(name))
-    end
-
-    @valid_parameters[name]
+    name = name.to_s
+    return true if name == "name"
+    validproperty?(name) || validparameter?(name) || metaparam?(name)
   end
+
 #  def valid_parameter?(param)
 #    param = param.to_s
 #
@@ -523,13 +543,13 @@ class Puppet::Resource::Type
 #  end
 
   def set_arguments(arguments)
-    @arguments = {}
     return if arguments.nil?
 
-    arguments.each do |arg, default|
-      arg = arg.to_s
-      warn_if_metaparam(arg, default)
-      @arguments[arg] = default
+    arguments.each do |name, default|
+      warn_if_metaparam(name, default)
+      newparam name do
+        defaultto(default) if default
+      end
     end
   end
 
@@ -548,8 +568,7 @@ class Puppet::Resource::Type
 
   # does the name reflect a valid parameter?
   def validparameter?(name)
-    raise Puppet::DevError, "Class #{self} has not defined parameters" unless defined?(@parameters)
-    !!(@paramhash.include?(name) or @@metaparamhash.include?(name))
+    !!(@paramhash.include?(name.to_sym) or metaparam?(name))
   end
 
   # Is this type's name isomorphic with the object?  That is, if the
@@ -891,7 +910,7 @@ class Puppet::Resource::Type
   end
 
   def warn_if_metaparam(param, default)
-    return unless Puppet::Type.metaparamclass(param)
+    return unless Puppet::Resource::Type.metaparam?(param)
 
     if default
       warnonce "#{param} is a metaparam; this value will inherit to all contained resources"

@@ -340,6 +340,7 @@ class Puppet::Transaction
       resource.warning "Skipping because of failed dependencies"
     elsif resource.virtual?
       resource.debug "Skipping because virtual"
+      # There was a subtle bug here that caused resources applicable on both to be skipped on hosts
     elsif (for_network_device and ! resource.appliable_to_device?)
       resource.debug "Skipping host resources because running on a device"
     elsif (! resource.appliable_to_host?)

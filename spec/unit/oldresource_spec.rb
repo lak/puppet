@@ -1,7 +1,7 @@
 #!/usr/bin/env rspec
 require 'spec_helper'
 
-describe Puppet::Type do
+describe Puppet::OldResource do
   it "should consider a parameter to be valid if it is a valid parameter" do
     Puppet::Type.type(:mount).should be_valid_parameter(:path)
   end

@@ -85,16 +85,6 @@
 #                        value.inspect
 #                end
 #            end
-#
-#            munge do |value|
-#                unless value == "absent" or value == :absent
-#                    # Add the :alias metaparam in addition to the property
-#                    @resource.newmetaparam(
-#                        @resource.class.metaparamclass(:alias), value
-#                    )
-#                end
-#                value
-#            end
 #        end
 #
 #        newproperty(:target) do

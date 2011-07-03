@@ -31,6 +31,9 @@ class Puppet::Parameter
           raise Puppet::DevError,
             "Either a default value or block must be provided"
         end
+        # Set the default value, so it can be used
+        # in serialization and such
+        @default = value
         define_method(:default) do value end
       end
     end

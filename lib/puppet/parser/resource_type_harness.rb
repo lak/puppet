@@ -1,10 +1,12 @@
 require 'puppet/parser'
+require 'puppet/util/errors'
 
 # This module provides all of the methods needed
 # to integrate Puppet::Resource::Type and Puppet::Parser::Scope -
 # basically, any method that needs to know about Types and Scopes
 # at the same time.
 module Puppet::Parser::ResourceTypeHarness
+  extend Puppet::Util::Errors # for exceptwrap
 
   # Now evaluate the code associated with this class or definition.
   def self.evaluate_code(resource_type, resource)
@@ -12,14 +14,14 @@ module Puppet::Parser::ResourceTypeHarness
     static_parent = evaluate_parent_type(resource_type, resource)
     scope = static_parent || resource.scope
 
-    scope = scope.newscope(:namespace => resource_type.namespace, :source => self, :resource => resource, :dynamic => !static_parent) unless resource.title == :main
+    scope = scope.newscope(:namespace => resource_type.namespace, :source => resource_type, :resource => resource, :dynamic => !static_parent) unless resource.title == :main
     scope.compiler.add_class(resource_type.name) unless resource_type.definition?
 
     set_resource_parameters(resource_type, resource, scope)
 
     resource_type.code.safeevaluate(scope) if resource_type.code
 
-    evaluate_ruby_code(resource, scope) if resource_type.ruby_code
+    evaluate_ruby_code(resource_type, resource, scope) if resource_type.ruby_code
   end
 
   # Make an instance of the resource type, and place it in the catalog
@@ -29,7 +31,7 @@ module Puppet::Parser::ResourceTypeHarness
   # values.
   def self.ensure_in_catalog(resource_type, scope, parameters=nil)
     resource_type.definition? and raise ArgumentError, "Cannot create resources for defined resource types without more information"
-    type_family = type == :hostclass ? :class : :node
+    type_family = resource_type.type == :hostclass ? :class : :node
 
     # Do nothing if the resource already exists; this makes sure we don't
     # get multiple copies of the class resource, which helps provide the
@@ -41,7 +43,7 @@ module Puppet::Parser::ResourceTypeHarness
     if resource = scope.catalog.resource(type_family, resource_type.name) and !parameters
       return resource
     end
-    resource = Puppet::Parser::Resource.new(type_family, resource_type.name, :scope => scope, :source => self)
+    resource = Puppet::Parser::Resource.new(type_family, resource_type.name, :scope => scope, :source => resource_type)
     if parameters
       parameters.each do |k,v|
         resource.set_parameter(k,v)
@@ -55,7 +57,7 @@ module Puppet::Parser::ResourceTypeHarness
   def self.instantiate_resource(resource_type, scope, resource)
     # Make sure our parent class has been evaluated, if we have one.
     if resource_type.parent && !scope.catalog.resource(resource.type, resource_type.parent)
-      ensure_in_catalog(parent_type(scope), scope)
+      ensure_in_catalog(resource_type.parent_type(scope), scope)
     end
 
     if ['Class', 'Node'].include? resource.type
@@ -85,7 +87,7 @@ module Puppet::Parser::ResourceTypeHarness
     scope.setvar("module_name", resource_type.module_name) if resource_type.module_name and ! set.include? :module_name
 
     if caller_name = scope.parent_module_name and ! set.include?(:caller_module_name)
-      scope.setvar("caller_module_name", resource_type.caller_name)
+      scope.setvar("caller_module_name", caller_name)
     end
     scope.class_set(resource_type.name, scope) if resource_type.hostclass? or resource_type.node?
     # Verify that all required arguments are either present or
@@ -115,7 +117,7 @@ module Puppet::Parser::ResourceTypeHarness
   private
 
   def self.evaluate_ruby_code(resource_type, resource, scope)
-    Puppet::DSL::ResourceAPI.new(resource, scope, resource_type, ruby_code).evaluate
+    Puppet::DSL::ResourceAPI.new(resource, scope, resource_type, resource_type.ruby_code).evaluate
   end
 
   def self.parent_scope(scope, klass)
