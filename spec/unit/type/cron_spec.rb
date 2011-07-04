@@ -37,7 +37,7 @@ describe Puppet::Type.type(:cron), :unless => Puppet.features.microsoft_windows?
 
     [:command, :minute, :hour, :weekday, :month, :monthday].each do |cronparam|
       it "should have #{cronparam} of type CronParam" do
-        @class.attrclass(cronparam).ancestors.should include CronParam
+        @class.parameter(cronparam).ancestors.should include CronParam
       end
     end
 
