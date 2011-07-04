@@ -286,6 +286,13 @@ describe Puppet::Type, :fails_on_windows => true do
 
       @type.properties.should == [foo, bar]
     end
+
+    it "should be able to return all known property names" do
+      foo = @type.newproperty(:foo)
+      bar = @type.newproperty(:bar)
+
+      @type.property_names.should == [:foo, :bar]
+    end
   end
 
   describe "when creating an event" do

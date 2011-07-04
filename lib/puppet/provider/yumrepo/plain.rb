@@ -1,8 +1,6 @@
 require 'puppet/provider'
 
 Puppet::Type.type(:yumrepo).provide :plain do
-    self.filetype = Puppet::Util::FileType.filetype(:flat)
-
     class << self
         attr_accessor :filetype
         # The writer is only used for testing, there should be no need
@@ -10,6 +8,8 @@ Puppet::Type.type(:yumrepo).provide :plain do
         attr_accessor :yumconf
         attr_writer :inifile
     end
+
+    self.filetype = Puppet::Util::FileType.filetype(:flat)
 
     @inifile = nil
 
@@ -20,7 +20,7 @@ Puppet::Type.type(:yumrepo).provide :plain do
 
     def self.instances
         l = []
-        check = validproperties
+        check = Puppet::Type.type(:yumrepo).property_names
         clear
         inifile.each_section do |s|
             next if s.name == "main"
