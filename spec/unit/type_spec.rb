@@ -271,6 +271,14 @@ describe Puppet::Type, :fails_on_windows => true do
       @type.newparam(:foo)
       @type.should be_valid_parameter("foo")
     end
+
+    it "should always consider :name to be a valid parameter" do
+      @type.should be_valid_parameter(:name)
+    end
+
+    it "should not consider :name to be a valid metaparameter" do
+      Puppet::Type.should_not be_metaparam(:name)
+    end
   end
 
   describe "when creating an event" do
