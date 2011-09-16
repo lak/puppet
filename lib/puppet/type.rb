@@ -1026,13 +1026,11 @@ class Type
   end
 
   newmetaparam(:check) do
-    desc "Audit specified attributes of resources over time, and report if any have changed.
-      This parameter has been deprecated in favor of 'audit'."
+    desc "Does some checking."
 
-    munge do |args|
-      resource.warning "'check' attribute is deprecated; use 'audit' instead"
-      resource[:audit] = args
-    end
+    # Need to confirm it's a valid check
+    #
+    # Need to somehow add the check params to the resource params
   end
 
   newmetaparam(:loglevel) do
