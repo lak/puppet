@@ -14,21 +14,17 @@ module Puppet
     end
 
     def sync
-      if safe_insync?(retrieve)
-        result = nil
+      result = set(self.should)
+      if should == :absent
+          provider.section[inikey] = nil
       else
-        result = set(self.should)
-        if should == :absent
-          resource.section[inikey] = nil
-        else
-          resource.section[inikey] = should
-        end
+          provider.section[inikey] = should
       end
       result
     end
 
     def retrieve
-      resource.section[inikey]
+      provider.section[inikey]
     end
 
     def inikey
@@ -62,141 +58,6 @@ module Puppet
       Continuation lines that yum supports for example for the
       baseurl are not supported. No attempt is made to access
       files included with the **include** directive"
-
-    class << self
-      attr_accessor :filetype
-      # The writer is only used for testing, there should be no need
-      # to change yumconf or inifile in any other context
-      attr_accessor :yumconf
-      attr_writer :inifile
-    end
-
-    self.filetype = Puppet::Util::FileType.filetype(:flat)
-
-    @inifile = nil
-
-    @yumconf = "/etc/yum.conf"
-
-    # Where to put files for brand new sections
-    @defaultrepodir = nil
-
-    def self.instances
-      l = []
-      check = validproperties
-      clear
-      inifile.each_section do |s|
-        next if s.name == "main"
-        obj = new(:name => s.name, :audit => check)
-        current_values = obj.retrieve
-        obj.eachproperty do |property|
-          if current_values[property].nil?
-            obj.delete(property.name)
-          else
-            property.should = current_values[property]
-          end
-        end
-        obj.delete(:audit)
-        l << obj
-      end
-      l
-    end
-
-    # Return the Puppet::Util::IniConfig::File for the whole yum config
-    def self.inifile
-      if @inifile.nil?
-        @inifile = read
-        main = @inifile['main']
-        raise Puppet::Error, "File #{yumconf} does not contain a main section" if main.nil?
-        reposdir = main['reposdir']
-        reposdir ||= "/etc/yum.repos.d, /etc/yum/repos.d"
-        reposdir.gsub!(/[\n,]/, " ")
-        reposdir.split.each do |dir|
-          Dir::glob("#{dir}/*.repo").each do |file|
-            @inifile.read(file) if File.file?(file)
-          end
-        end
-        reposdir.split.each do |dir|
-          if File::directory?(dir) && File::writable?(dir)
-            @defaultrepodir = dir
-            break
-          end
-        end
-      end
-      @inifile
-    end
-
-    # Parse the yum config files. Only exposed for the tests
-    # Non-test code should use self.inifile to get at the
-    # underlying file
-    def self.read
-      result = Puppet::Util::IniConfig::File.new
-      result.read(yumconf)
-      main = result['main']
-      raise Puppet::Error, "File #{yumconf} does not contain a main section" if main.nil?
-      reposdir = main['reposdir']
-      reposdir ||= "/etc/yum.repos.d, /etc/yum/repos.d"
-      reposdir.gsub!(/[\n,]/, " ")
-      reposdir.split.each do |dir|
-        Dir::glob("#{dir}/*.repo").each do |file|
-          result.read(file) if File.file?(file)
-        end
-      end
-      if @defaultrepodir.nil?
-        reposdir.split.each do |dir|
-          if File::directory?(dir) && File::writable?(dir)
-            @defaultrepodir = dir
-            break
-          end
-        end
-      end
-      result
-    end
-
-    # Return the Puppet::Util::IniConfig::Section with name NAME
-    # from the yum config
-    def self.section(name)
-      result = inifile[name]
-      if result.nil?
-        # Brand new section
-        path = yumconf
-        path = File::join(@defaultrepodir, "#{name}.repo") unless @defaultrepodir.nil?
-        Puppet::info "create new repo #{name} in file #{path}"
-        result = inifile.add_section(name, path)
-      end
-      result
-    end
-
-    # Store all modifications back to disk
-    def self.store
-      inifile.store
-      unless Puppet[:noop]
-        target_mode = 0644 # FIXME: should be configurable
-        inifile.each_file do |file|
-          current_mode = File.stat(file).mode & 0777
-          unless current_mode == target_mode
-            Puppet::info "changing mode of #{file} from %03o to %03o" % [current_mode, target_mode]
-            File.chmod(target_mode, file)
-          end
-        end
-      end
-    end
-
-    # This is only used during testing.
-    def self.clear
-      @inifile = nil
-      @yumconf = "/etc/yum.conf"
-      @defaultrepodir = nil
-    end
-
-    # Return the Puppet::Util::IniConfig::Section for this yumrepo resource
-    def section
-      self.class.section(self[:name])
-    end
-
-    # Store modifications to this yumrepo resource back to disk
-    def flush
-      self.class.store
-    end
 
     newparam(:name) do
       desc "The name of the repository.  This corresponds to the
