@@ -785,7 +785,7 @@ describe Puppet::Type::RelationshipMetaparam do
   end
 end
 
-describe Puppet::Type.metaparamclass(:check) do
+describe Puppet::Type.parameter(:check) do
   include PuppetSpec::Files
   it "should warn and create an instance of ':audit'" do
     file = Puppet::Type.type(:file).new :path => make_absolute('/foo')
@@ -795,7 +795,7 @@ describe Puppet::Type.metaparamclass(:check) do
   end
 end
 
-describe Puppet::Type.metaparamclass(:audit) do
+describe Puppet::Type.parameter(:audit) do
   include PuppetSpec::Files
   before do
     @resource = Puppet::Type.type(:file).new :path => make_absolute('/foo')
