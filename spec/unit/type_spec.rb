@@ -16,18 +16,6 @@ describe Puppet::Type, :fails_on_windows => true do
     Puppet::Type.type(:mount).should be_valid_parameter(:noop)
   end
 
-  it "should use its catalog as its expirer" do
-    catalog = Puppet::Resource::Catalog.new
-    resource = Puppet::Type.type(:mount).new(:name => "foo", :fstype => "bar", :pass => 1, :ensure => :present)
-    resource.catalog = catalog
-    resource.expirer.should equal(catalog)
-  end
-
-  it "should do nothing when asked to expire when it has no catalog" do
-    resource = Puppet::Type.type(:mount).new(:name => "foo", :fstype => "bar", :pass => 1, :ensure => :present)
-    lambda { resource.expire }.should_not raise_error
-  end
-
   it "should be able to retrieve a property by name" do
     resource = Puppet::Type.type(:mount).new(:name => "foo", :fstype => "bar", :pass => 1, :ensure => :present)
     resource.property(:fstype).must be_instance_of(Puppet::Type.type(:mount).parameter(:fstype))
@@ -362,7 +350,7 @@ describe Puppet::Type, :fails_on_windows => true do
 
     it "should have documentation for the 'provider' parameter if there are providers" do
       @type.provide(:test_provider)
-      @type.paramdoc(:provider).should =~ /`provider_test_type`[\s\r]+resource/
+      @type.parameter(:provider).doc.should =~ /`provider_test_type`[\s\r]+resource/
     end
 
     it "should not have documentation for the 'provider' parameter if there are no providers" do
