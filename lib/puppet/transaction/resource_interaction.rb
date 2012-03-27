@@ -23,7 +23,7 @@ class Puppet::Transaction::ResourceInteraction
 
   def ask
     while true do
-      puts "What should I do? ([Change]/Hold/Fail/Skip)"
+      puts "What should I do? ([Change]/Hold/Fail/Noop)"
       answer = $stdin.readline.chomp
       answer = "c" if answer == ""
       answer = answer.downcase[0..0].intern
@@ -31,7 +31,7 @@ class Puppet::Transaction::ResourceInteraction
       when :c: change; return
       when :h: hold; return
       when :f: fail; return
-      when :s: skip; return
+      when :n: noop; return
       else
         $stderr.puts "Invalid answer"
       end
@@ -65,11 +65,11 @@ class Puppet::Transaction::ResourceInteraction
   end
 
   def hold
-    resource.warning "Hold not yet implemented; skipping"
-    skip
+    resource.warning "Hold not yet implemented; setting to noop"
+    noop
   end
 
-  def skip
+  def noop
     resource.info "Interactively marking as noop"
     resource[:noop] = true
     @continue = true
