@@ -4,7 +4,7 @@ class Puppet::Transaction::ResourceHarness
   extend Forwardable
   def_delegators :@transaction, :relationship_graph
 
-  attr_reader :transaction
+  attr_reader :transaction, :held_resources
 
   def allow_changes?(resource)
     if resource.purging? and resource.deleting? and deps = relationship_graph.dependents(resource) \
@@ -30,7 +30,7 @@ class Puppet::Transaction::ResourceHarness
 
   def interact(resource, current_values, desired_values)
     require 'puppet/transaction/resource_interaction'
-    interaction = Puppet::Transaction::ResourceInteraction.new(resource, current_values, desired_values)
+    interaction = Puppet::Transaction::ResourceInteraction.new(self, resource, current_values, desired_values)
     interaction.go
     interaction
   end
@@ -58,7 +58,13 @@ class Puppet::Transaction::ResourceHarness
 
     if Puppet[:interactive]
       # This is an awkward interface
-      return [] unless interact(resource, current_values, desired_values).continue?
+      interact(resource, current_values, desired_values)
+    end
+
+    if held_resources.held?(resource)
+      # XXX This warns even if there aren't changes.  :/
+      resource.warning "This resource is held; marking as noop. Remove from #{Puppet[:held_resources]} to stop hold"
+      resource[:noop] = true
     end
 
     # Update the machine state & create logs/events
@@ -163,6 +169,13 @@ class Puppet::Transaction::ResourceHarness
 
   def initialize(transaction)
     @transaction = transaction
+    require 'puppet/resource/held'
+    @held_resources = Puppet::Resource::Held.new
+    @held_resources.load if transaction.catalog.host_config?
+  end
+
+  def finish
+    @held_resources.write if transaction.catalog.host_config?
   end
 
   def scheduled?(status, resource)

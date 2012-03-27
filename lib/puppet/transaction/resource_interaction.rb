@@ -1,11 +1,7 @@
 require 'puppet/transaction'
 
 class Puppet::Transaction::ResourceInteraction
-  attr_accessor :changed, :resource, :current_values, :desired_values
-
-  def continue?
-    @continue
-  end
+  attr_accessor :harness, :changed, :resource, :current_values, :desired_values
 
   def go
     check_for_change
@@ -13,23 +9,28 @@ class Puppet::Transaction::ResourceInteraction
     answer = ask()
   end
 
-  def initialize(resource, current_values, desired_values)
-    @resource, @current_values, @desired_values = resource, current_values, desired_values
+  def initialize(harness, resource, current_values, desired_values)
+    @harness, @resource, @current_values, @desired_values = harness, resource, current_values, desired_values
     @changed = 0
-    @continue = false
   end
 
   private
 
   def ask
+    if harness.held_resources.held?(resource)
+      held = "Resource is held. "
+    else
+      held = ""
+    end
     while true do
-      puts "What should I do? ([Change]/Hold/Fail/Noop)"
+      print "#{held}What should I do? ([Change]/Hold/Fail/Noop/Release)  "
       answer = $stdin.readline.chomp
       answer = "c" if answer == ""
       answer = answer.downcase[0..0].intern
       case answer
       when :c: change; return
       when :h: hold; return
+      when :r: release; return
       when :f: fail; return
       when :n: noop; return
       else
@@ -39,7 +40,7 @@ class Puppet::Transaction::ResourceInteraction
   end
 
   def change
-    @continue = true
+    # just a noop
   end
 
   def check_for_change
@@ -65,13 +66,15 @@ class Puppet::Transaction::ResourceInteraction
   end
 
   def hold
-    resource.warning "Hold not yet implemented; setting to noop"
-    noop
+    harness.held_resources.hold(resource)
+  end
+
+  def release
+    harness.held_resources.release(resource)
   end
 
   def noop
     resource.info "Interactively marking as noop"
     resource[:noop] = true
-    @continue = true
   end
 end

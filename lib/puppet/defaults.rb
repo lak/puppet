@@ -343,6 +343,11 @@ module Puppet
         :default  => false,
         :type     => :boolean,
         :desc     => "Whether to run Puppet interactively. Can only be used on command line."
+    },
+    :held_resources => {
+        :default => "$vardir/held_resources.txt",
+        :type => :file,
+        :desc => "The list of files not to be changed by Puppet."
     }
   )
   Puppet.define_settings(:module_tool,

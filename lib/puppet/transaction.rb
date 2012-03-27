@@ -107,6 +107,7 @@ class Puppet::Transaction
     end
 
     Puppet.debug "Finishing transaction #{object_id}"
+    resource_harness.finish
   end
 
   def events

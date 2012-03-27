@@ -50,4 +50,30 @@ Puppet::Indirector::Face.define(:resource, '0.0.1') do
 
         Puppet::Face[:resource, '0.0.1'].save(my_resource)
   EOT
+
+  action(:hold) do
+    summary "Stop a resource from being managed"
+    arguments "<resource reference> ..."
+    returns <<-'EOT'
+      True if successful, false otherwise.
+    EOT
+    description <<-'EOT'
+      Tells Puppet to stop managing a given resource.  You will get
+      warnings on every held resource, but never changes.
+    EOT
+    examples <<-'EOT'
+      Don't manage the /etc/motd file:
+
+      $ puppet resource hold 'File[/etc/motd]'
+    EOT
+
+    when_invoked do |*args|
+      options = args.pop
+      holder = Puppet::Resource::Held.new
+      args.each do |r|
+        holder.hold(r)
+      end
+      nil
+    end
+  end
 end
