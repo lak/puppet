@@ -28,6 +28,13 @@ class Puppet::Transaction::ResourceHarness
     Puppet::Util::Storage.cache(resource)[name] = value
   end
 
+  def interact(resource, current_values, desired_values)
+    require 'puppet/transaction/resource_interaction'
+    interaction = Puppet::Transaction::ResourceInteraction.new(resource, current_values, desired_values)
+    interaction.go
+    interaction
+  end
+
   def perform_changes(resource)
     current = resource.retrieve_resource
 
@@ -47,6 +54,11 @@ class Puppet::Transaction::ResourceHarness
     # Record the current state in state.yml.
     audited_params.each do |param|
       cache(resource, param, current_values[param])
+    end
+
+    if Puppet[:interactive]
+      # This is an awkward interface
+      return [] unless interact(resource, current_values, desired_values).continue?
     end
 
     # Update the machine state & create logs/events

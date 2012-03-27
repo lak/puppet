@@ -338,6 +338,11 @@ module Puppet
         :desc     => "Freezes the 'main' class, disallowing any code to be added to it.  This\n" +
             "essentially means that you can't have any code outside of a node, class, or definition other\n" +
             "than in the site manifest.",
+    },
+    :interactive => {
+        :default  => false,
+        :type     => :boolean,
+        :desc     => "Whether to run Puppet interactively. Can only be used on command line."
     }
   )
   Puppet.define_settings(:module_tool,
