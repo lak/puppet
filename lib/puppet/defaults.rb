@@ -333,11 +333,17 @@ module Puppet
       performed work during the normal run.",
 		},
     :freeze_main => {
-        :default  => false,
-				:type		=> :boolean,
-        :desc     => "Freezes the 'main' class, disallowing any code to be added to it.  This\n" +
-            "essentially means that you can't have any code outside of a node, class, or definition other\n" +
-            "than in the site manifest.",
+      :default  => false,
+      :type		=> :boolean,
+      :desc     => "Freezes the 'main' class, disallowing any code to be added to it.  This\n" +
+          "essentially means that you can't have any code outside of a node, class, or definition other\n" +
+          "than in the site manifest.",
+    },
+    :audited_resources => {
+      :default => "$vardir/audited_resources.txt",
+      :type => :file,
+      :desc => "A file listing all resources that should be added
+        to the audit."
     }
   )
   Puppet.define_settings(:module_tool,

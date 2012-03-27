@@ -108,12 +108,25 @@ Copyright (c) 2011 Puppet Labs, LLC Licensed under the Apache 2.0 License
     require 'puppet/file_bucket/dipper'
   end
 
+  def audit_watched_resources(catalog)
+    require 'puppet/resource/audited'
+    auditor = Puppet::Resource::Audited.new
+    auditor.load
+    auditor.audited.each do |ref|
+      resource = Puppet::Resource.new(ref)
+      resource[:audit] = :all
+      catalog.add_resource(resource)
+    end
+  end
+
   def run_command
     benchmark(:notice, "Finished inspection") do
       retrieval_starttime = Time.now
 
       unless catalog = Puppet::Resource::Catalog.indirection.find(Puppet[:certname])
-        raise "Could not find catalog for #{Puppet[:certname]}"
+        # We might have watched resources, so let's allow an empty catalog
+        catalog = Puppet::Resource::Catalog.new(Puppet[:certname])
+        #raise "Could not find catalog for #{Puppet[:certname]}"
       end
 
       @report.configuration_version = catalog.version
@@ -125,6 +138,8 @@ Copyright (c) 2011 Puppet Labs, LLC Licensed under the Apache 2.0 License
       if Puppet[:archive_files]
         dipper = Puppet::FileBucket::Dipper.new(:Server => Puppet[:archive_file_server])
       end
+
+      audit_watched_resources(catalog)
 
       catalog.to_ral.resources.each do |ral_resource|
         audited_attributes = ral_resource[:audit]
