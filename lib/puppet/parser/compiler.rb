@@ -23,6 +23,7 @@ class Puppet::Parser::Compiler
     # ...and we actually do the compile now we have caching ready.
     new(node).compile.to_resource
   rescue => detail
+    puts detail.backtrace
     message = "#{detail} on node #{node.name}"
     Puppet.log_exception(detail, message)
     raise Puppet::Error, message

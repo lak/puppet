@@ -111,6 +111,28 @@ class Puppet::Interface::Action
     @render_as = value.to_sym
   end
 
+  # LAK: Imported from FaceBase, since this makes it much easier
+  # for any caller to run, rather than just applications.
+  def render(format, result, args_and_options = [{}])
+    format_handler = if format == :json
+      Puppet::Network::FormatHandler.format(:pson)
+    else
+      Puppet::Network::FormatHandler.format(format) || raise("could not find format '#{format}'")
+    end
+    hook = when_rendering(format_handler.name)
+
+    if hook
+      # when defining when_rendering on your action you can optionally
+      # include arguments and options
+      if hook.arity > 1
+        result = hook.call(result, *args_and_options)
+      else
+        result = hook.call(result)
+      end
+    end
+
+    format_handler.render(result)
+  end
 
   ########################################################################
   # Initially, this was defined to allow the @action.invoke pattern, which is

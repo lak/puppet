@@ -39,20 +39,9 @@ class Puppet::Application::FaceBase < Puppet::Application
     @render_as or raise ArgumentError, "I don't know how to render '#{format}'"
   end
 
+  # LAK: Moved most of this method to Action#render
   def render(result, args_and_options)
-    hook = action.when_rendering(render_as.name)
-
-    if hook
-      # when defining when_rendering on your action you can optionally
-      # include arguments and options
-      if hook.arity > 1
-        result = hook.call(result, *args_and_options)
-      else
-        result = hook.call(result)
-      end
-    end
-
-    render_as.render(result)
+    action.render(render_as.name, result, args_and_options)
   end
 
   def preinit
