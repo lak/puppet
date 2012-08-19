@@ -106,6 +106,11 @@ class Type
     # @return [Array<Puppet::Property>] The list of declared properties for the resource type.
     # The returned lists contains instances if Puppet::Property or its subclasses.
     attr_reader :properties
+    attr_accessor :is_capability
+  end
+
+  def self.is_capability?
+    is_capability
   end
 
   # Returns all the attribute names of the type in the appropriate order.
@@ -1190,6 +1195,14 @@ class Type
       when false, :false, "false"; @resource.noop = false
       end
     end
+  end
+
+  newmetaparam(:provides) do
+    desc "Specify the capability that this provides."
+  end
+
+  newmetaparam(:consumes) do
+    desc "Specify the capability that this resource requires."
   end
 
   newmetaparam(:schedule) do

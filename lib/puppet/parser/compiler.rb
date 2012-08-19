@@ -358,6 +358,13 @@ class Puppet::Parser::Compiler
       resource.finish if resource.respond_to?(:finish)
     end
 
+    # Add capability params as the second-to-last step
+    #puts "Adding capabilities"
+    #resources.each { |resource| resource.define_capabilities }
+
+    #puts "Adding capability parameters"
+    #resources.each { |resource| resource.add_capability_parameters }
+
     add_resource_metaparams
   end
 

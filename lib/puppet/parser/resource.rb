@@ -230,6 +230,53 @@ class Puppet::Parser::Resource < Puppet::Resource
   # Convert this resource to a RAL resource.
   def_delegator :to_resource, :to_ral
 
+  def define_capabilities
+    return unless provides = self[:provides]
+    provides = [provides] unless provides.is_a?(Array)
+
+    unless provides.length > 0
+      return
+    end
+
+    provides.each do |ref|
+      resource = Puppet::Parser::Resource.new(ref.type, ref.title, :scope => scope)
+      type = Puppet::Type.type(ref.type)
+
+      type.parameters.each do |param|
+        next if param.to_s == "name"
+
+        if value = self[param]
+          resource[param] = value
+        else
+          raise "Could not find parameter #{param} required by capability #{ref}"
+        end
+      end
+
+      catalog.add_resource resource
+    end
+  end
+
+  def add_capability_parameters
+    return unless caps = self[:consumes]
+    caps = [caps] unless caps.is_a?(Array)
+
+    unless caps.length > 0
+      return
+    end
+
+    caps.each do |ref|
+      # ref is an actual resource instance (with no params)
+      unless cap = catalog.resource(ref.to_s)
+        catalog.resources.each { |res| puts "=> #{res.ref}" }
+        raise "Could not find capability #{ref} for #{self}"
+      end
+      cap.to_hash.each do |param, value|
+        next if param.to_s == "name"
+        self[param] = value
+      end
+    end
+  end
+
   private
 
   # Add default values from our definition.

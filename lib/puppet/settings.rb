@@ -905,6 +905,7 @@ Generated on #{Time.now}.
       begin
         catalog = to_catalog(*sections).to_ral
       rescue => detail
+        puts detail.backtrace
         Puppet.log_and_raise(detail, "Could not create resources for managing Puppet's files and directories in sections #{sections.inspect}: #{detail}")
       end
 

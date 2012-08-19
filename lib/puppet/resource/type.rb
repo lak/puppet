@@ -137,6 +137,8 @@ class Puppet::Resource::Type
     code.safeevaluate(scope) if code
 
     evaluate_ruby_code(resource, scope) if ruby_code
+
+    resource.define_capabilities
   end
 
   def initialize(type, name, options = {})
@@ -293,6 +295,10 @@ class Puppet::Resource::Type
   # Set any arguments passed by the resource as variables in the scope.
   def set_resource_parameters(resource, scope)
     set = {}
+
+    # Add capability parameters
+    resource.add_capability_parameters
+
     resource.to_hash.each do |param, value|
       param = param.to_sym
       fail Puppet::ParseError, "#{resource.ref} does not accept attribute #{param}" unless valid_parameter?(param)
