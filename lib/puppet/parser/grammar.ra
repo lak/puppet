@@ -12,7 +12,7 @@ token IF ELSE IMPORT DEFINE ELSIF VARIABLE CLASS INHERITS NODE BOOLEAN
 token NAME SEMIC CASE DEFAULT AT LCOLLECT RCOLLECT CLASSREF
 token NOT OR AND UNDEF PARROW PLUS MINUS TIMES DIV LSHIFT RSHIFT UMINUS
 token MATCH NOMATCH REGEX IN_EDGE OUT_EDGE IN_EDGE_SUB OUT_EDGE_SUB
-token IN UNLESS MODULO
+token IN UNLESS MODULO PRODUCES CONSUMES
 
 prechigh
   right NOT
@@ -615,18 +615,25 @@ import: IMPORT strings {
 
 # Disable definition inheritance for now. 8/27/06, luke
 #definition: DEFINE NAME argumentlist parent LBRACE statements RBRACE {
-definition: DEFINE classname argumentlist LBRACE statements RBRACE {
+definition: DEFINE classname argumentlist capability LBRACE statements RBRACE {
   @lexer.commentpop
   result = Puppet::Parser::AST::Definition.new(classname(val[1]),
-                                               ast_context(true).merge(:arguments => val[2], :code => val[4],
+                                               ast_context(true).merge(:arguments => val[2], :code => val[5],
                                                                        :line => val[0][:line]))
+
+  if hash = val[3]
+    result.set_capability(hash)
+  end
   @lexer.indefine = false
 
 #}           | DEFINE NAME argumentlist parent LBRACE RBRACE {
-}           | DEFINE classname argumentlist LBRACE RBRACE {
+}           | DEFINE classname argumentlist capability LBRACE RBRACE {
   @lexer.commentpop
   result = Puppet::Parser::AST::Definition.new(classname(val[1]),
                                                ast_context(true).merge(:arguments => val[2], :line => val[0][:line]))
+  if hash = val[3]
+    result.set_capability(hash)
+  end
   @lexer.indefine = false
 }
 
@@ -706,6 +713,13 @@ arguments:    argument
 argument:
  VARIABLE EQUALS expression { result = [val[0][:value], val[2]] }
 | VARIABLE { result = [val[0][:value]] }
+
+capability: PRODUCES name argumentlist {
+  result = {:name => val[1].value, :values => val[2], :type => :produces}
+}
+  | CONSUMES name argumentlist {
+  result = {:name => val[1].value, :values => val[2], :type => :consumes}
+}
 
 nodeparent:       nil
   | INHERITS hostname {

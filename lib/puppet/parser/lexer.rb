@@ -318,7 +318,9 @@ class Puppet::Parser::Lexer
     "false"    => :FALSE,
     "true"     => :TRUE,
     "in"       => :IN,
-    "unless"   => :UNLESS
+    "unless"   => :UNLESS,
+    "consumes" => :CONSUMES,
+    "produces" => :PRODUCES
   )
 
   def clear

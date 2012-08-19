@@ -231,49 +231,42 @@ class Puppet::Parser::Resource < Puppet::Resource
   def_delegator :to_resource, :to_ral
 
   def define_capabilities
-    return unless provides = self[:provides]
-    provides = [provides] unless provides.is_a?(Array)
+    return unless resource_type.produces
+    cap_type, values = resource_type.produces
+    values = values.evaluate(scope) if values
 
-    unless provides.length > 0
-      return
+    cap_resource = Puppet::Parser::Resource.new(cap_type, self.title, :scope => scope)
+    unless type = Puppet::Type.type(cap_type)
+      raise "Could not find capability type #{cap_type}"
     end
 
-    provides.each do |ref|
-      resource = Puppet::Parser::Resource.new(ref.type, ref.title, :scope => scope)
-      type = Puppet::Type.type(ref.type)
+    type.parameters.each do |param|
+      next if param.to_s == "name"
 
-      type.parameters.each do |param|
-        next if param.to_s == "name"
-
-        if value = self[param]
-          resource[param] = value
-        else
-          raise "Could not find parameter #{param} required by capability #{ref}"
-        end
+      if value = self[param]
+        cap_resource[param] = value
+      else
+        raise "Could not find parameter #{param} required by capability #{ref}"
       end
-
-      catalog.add_resource resource
     end
+
+    puts "Adding #{cap_resource} as #{cap_resource.to_hash.inspect}"
+    catalog.add_resource cap_resource
   end
 
   def add_capability_parameters
-    return unless caps = self[:consumes]
-    caps = [caps] unless caps.is_a?(Array)
+    return unless resource_type.consumes
 
-    unless caps.length > 0
-      return
+    cap_type, values = resource_type.consumes
+    values = values.evaluate(scope) if values
+
+    unless cap = catalog.resource(cap_type, self.name)
+      catalog.resources.each { |res| puts "=> #{res.ref}" }
+      raise "Could not find capability #{ref} for #{self}"
     end
-
-    caps.each do |ref|
-      # ref is an actual resource instance (with no params)
-      unless cap = catalog.resource(ref.to_s)
-        catalog.resources.each { |res| puts "=> #{res.ref}" }
-        raise "Could not find capability #{ref} for #{self}"
-      end
-      cap.to_hash.each do |param, value|
-        next if param.to_s == "name"
-        self[param] = value
-      end
+    cap.to_hash.each do |param, value|
+      next if param.to_s == "name"
+      self[param] = value
     end
   end
 

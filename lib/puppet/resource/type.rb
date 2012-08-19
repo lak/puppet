@@ -29,7 +29,7 @@ class Puppet::Resource::Type
   RESOURCE_EXTERNAL_NAMES_TO_KINDS = RESOURCE_KINDS_TO_EXTERNAL_NAMES.invert
 
   attr_accessor :file, :line, :doc, :code, :ruby_code, :parent, :resource_type_collection
-  attr_reader :namespace, :arguments, :behaves_like, :module_name
+  attr_reader :namespace, :arguments, :behaves_like, :module_name, :capability
 
   # This should probably be renamed to 'kind' eventually, in accordance with the changes
   #  made for serialization and API usability (#14137).  At the moment that seems like
@@ -290,6 +290,23 @@ class Puppet::Resource::Type
     end
 
     @parent_type
+  end
+
+  def consumes
+    return nil unless capability and capability[:type] == :consumes
+    return [capability[:name], capability[:values]]
+  end
+
+  def produces
+    #puts "Checking #{name} for 'produces': #{capability.inspect}"
+    return nil unless capability and capability[:type] == :produces
+    return [capability[:name], capability[:values]]
+  end
+
+  # This only supports one capability, and a given type can either consume or produce, but not both
+  # It's a prototype, yo
+  def set_capability(hash)
+    @capability = hash
   end
 
   # Set any arguments passed by the resource as variables in the scope.

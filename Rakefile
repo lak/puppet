@@ -66,3 +66,17 @@ if defined?(RSpec::Core::RakeTask)
       t.fail_on_error = true
   end
 end
+
+desc "Rebuild the parser file from the grammer"
+task :parser => "lib/puppet/parser/parser.rb"
+
+file "lib/puppet/parser/grammer.ra"
+
+file "lib/puppet/parser/parser.rb" => "lib/puppet/parser/grammer.ra" do
+  sh "racc -olib/puppet/parser/parser.rb lib/puppet/parser/grammar.ra"
+end
+
+desc "Rebuild the parser file from the grammer and include a debug file"
+file "lib/puppet/parser/grammar.output" => "lib/puppet/parser/grammer.ra" do
+  sh "racc -v -olib/puppet/parser/parser.rb lib/puppet/parser/grammar.ra"
+end
