@@ -250,6 +250,9 @@ class Puppet::Parser::Resource < Puppet::Resource
       end
     end
 
+    # Add the producing resource as a dependency
+    cap_resource[:require] = self.to_ref
+
     catalog.add_resource cap_resource
   end
 
@@ -258,10 +261,13 @@ class Puppet::Parser::Resource < Puppet::Resource
 
     cap_type, values = resource_type.consumes
 
-    unless cap = catalog.resource(cap_type, self.name)
+    unless cap_resource = catalog.resource(cap_type, self.name)
       catalog.resources.each { |res| puts "=> #{res.ref}" }
-      raise "Could not find capability #{ref} for #{self}"
+      raise "Could not find capability #{cap_type/self.name} for #{self}"
     end
+
+    # Add the capability as a dependency for the consuming resource.
+    cap_resource[:before] = self.to_ref
 
     map = {}
     if values
@@ -270,9 +276,10 @@ class Puppet::Parser::Resource < Puppet::Resource
       end
     end
 
-    cap.to_hash.each do |param, value|
+    cap_resource.to_hash.each do |param, value|
       mapped_param = map[param.to_s] || param
       next if mapped_param.to_s == "name"
+      next if Puppet::Type.metaparam?(mapped_param)
       self[mapped_param] = value
     end
   end
