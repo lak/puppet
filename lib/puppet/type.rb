@@ -1197,14 +1197,6 @@ class Type
     end
   end
 
-  newmetaparam(:provides) do
-    desc "Specify the capability that this provides."
-  end
-
-  newmetaparam(:consumes) do
-    desc "Specify the capability that this resource requires."
-  end
-
   newmetaparam(:schedule) do
     desc "On what schedule the object should be managed.  You must create a
       schedule object, and then reference the name of that object to use

@@ -250,7 +250,6 @@ class Puppet::Parser::Resource < Puppet::Resource
       end
     end
 
-    puts "Adding #{cap_resource} as #{cap_resource.to_hash.inspect}"
     catalog.add_resource cap_resource
   end
 
@@ -258,15 +257,23 @@ class Puppet::Parser::Resource < Puppet::Resource
     return unless resource_type.consumes
 
     cap_type, values = resource_type.consumes
-    values = values.evaluate(scope) if values
 
     unless cap = catalog.resource(cap_type, self.name)
       catalog.resources.each { |res| puts "=> #{res.ref}" }
       raise "Could not find capability #{ref} for #{self}"
     end
+
+    map = {}
+    if values
+      values.each do |name, value|
+        map[name] = value.safeevaluate(scope)
+      end
+    end
+
     cap.to_hash.each do |param, value|
-      next if param.to_s == "name"
-      self[param] = value
+      mapped_param = map[param.to_s] || param
+      next if mapped_param.to_s == "name"
+      self[mapped_param] = value
     end
   end
 

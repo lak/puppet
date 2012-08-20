@@ -4,7 +4,6 @@ class Puppet::Parser::AST::Definition < Puppet::Parser::AST::TopLevelConstruct
   attr_accessor :context, :capability
 
   def set_capability(hash)
-    puts "Setting cap hash #{hash.inspect}"
     @capability = hash
   end
 
