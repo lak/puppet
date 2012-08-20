@@ -1197,6 +1197,14 @@ class Type
     end
   end
 
+  newmetaparam(:produce) do
+    desc "Specify the capability that this provides.  This both enables the capability, and specifies the name of the instance."
+  end
+
+  newmetaparam(:consume) do
+    desc "Specify the capability that this resource requires.  This both enables the capability, and specifies the name of the instance."
+  end
+
   newmetaparam(:schedule) do
     desc "On what schedule the object should be managed.  You must create a
       schedule object, and then reference the name of that object to use

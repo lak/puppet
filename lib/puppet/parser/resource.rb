@@ -232,10 +232,15 @@ class Puppet::Parser::Resource < Puppet::Resource
 
   def define_capabilities
     return unless resource_type.produces
+
+    # This tells us that they actually want the capability created,
+    # and also what its name should be.
+    return unless produces = self[:produce]
+
     cap_type, values = resource_type.produces
     values = values.evaluate(scope) if values
 
-    cap_resource = Puppet::Parser::Resource.new(cap_type, self.title, :scope => scope)
+    cap_resource = Puppet::Parser::Resource.new(cap_type, produces.title, :scope => scope)
     unless type = Puppet::Type.type(cap_type)
       raise "Could not find capability type #{cap_type}"
     end
@@ -259,9 +264,13 @@ class Puppet::Parser::Resource < Puppet::Resource
   def add_capability_parameters
     return unless resource_type.consumes
 
+    # This tells us that they actually want the capability sought,
+    # and also what name to look for
+    return unless consumes = self[:consume]
+
     cap_type, values = resource_type.consumes
 
-    unless cap_resource = catalog.resource(cap_type, self.name)
+    unless cap_resource = catalog.resource(cap_type, consumes.title)
       catalog.resources.each { |res| puts "=> #{res.ref}" }
       raise "Could not find capability #{cap_type/self.name} for #{self}"
     end
