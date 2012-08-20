@@ -238,7 +238,12 @@ class Puppet::Parser::Resource < Puppet::Resource
     return unless produces = self[:produce]
 
     cap_type, values = resource_type.produces
-    values = values.evaluate(scope) if values
+    map = {}
+    if values
+      values.each do |name, value|
+        map[value.safeevaluate(scope)] = name
+      end
+    end
 
     cap_resource = Puppet::Parser::Resource.new(cap_type, produces.title, :scope => scope)
     unless type = Puppet::Type.type(cap_type)
@@ -246,12 +251,14 @@ class Puppet::Parser::Resource < Puppet::Resource
     end
 
     type.parameters.each do |param|
-      next if param.to_s == "name"
+      mapped_param = map[param.to_s] || param
+      next if mapped_param.to_s == "name"
+      next if Puppet::Type.metaparam?(mapped_param)
 
-      if value = self[param]
+      if value = self[mapped_param]
         cap_resource[param] = value
       else
-        raise "Could not find parameter #{param} required by capability #{ref}"
+        raise "Could not find parameter #{param} required by capability #{ref} as #{mapped_param}"
       end
     end
 
