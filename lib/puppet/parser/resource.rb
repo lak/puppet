@@ -230,12 +230,10 @@ class Puppet::Parser::Resource < Puppet::Resource
   # Convert this resource to a RAL resource.
   def_delegator :to_resource, :to_ral
 
-  def define_capabilities
-    return unless resource_type.produces
-
-    # This tells us that they actually want the capability created,
-    # and also what its name should be.
-    return unless produces = self[:produce]
+  # Extract this method, so we can store in the catalog or
+  # just use it as a data container
+  def capability_resource(title = nil)
+    title ||= self.title
 
     cap_type, values = resource_type.produces
     map = {}
@@ -245,7 +243,7 @@ class Puppet::Parser::Resource < Puppet::Resource
       end
     end
 
-    cap_resource = Puppet::Parser::Resource.new(cap_type, produces.title, :scope => scope)
+    cap_resource = Puppet::Parser::Resource.new(cap_type, title, :scope => scope)
     unless type = Puppet::Type.type(cap_type)
       raise "Could not find capability type #{cap_type}"
     end
@@ -262,6 +260,18 @@ class Puppet::Parser::Resource < Puppet::Resource
       end
     end
 
+    cap_resource
+  end
+
+  def define_capabilities
+    return unless resource_type.produces
+
+    # This tells us that they actually want the capability created,
+    # and also what its name should be.
+    return unless produces = self[:produce]
+
+    cap_resource = capability_resource(produces.title)
+
     # Add the producing resource as a dependency
     cap_resource[:require] = self.to_ref
 
@@ -270,20 +280,48 @@ class Puppet::Parser::Resource < Puppet::Resource
 
   def add_capability_parameters
     return unless resource_type.consumes
+    cap_type, values = resource_type.consumes
 
     # This tells us that they actually want the capability sought,
     # and also what name to look for
-    return unless consumes = self[:consume]
+    if consumes = self[:consume]
 
-    cap_type, values = resource_type.consumes
+      unless cap_resource = catalog.resource(cap_type, consumes.title)
+        catalog.resources.each { |res| puts "=> #{res.ref}" }
+        raise "Could not find capability #{cap_type/self.name} for #{self}"
+      end
 
-    unless cap_resource = catalog.resource(cap_type, consumes.title)
-      catalog.resources.each { |res| puts "=> #{res.ref}" }
-      raise "Could not find capability #{cap_type/self.name} for #{self}"
+      # Add the capability as a dependency for the consuming resource.
+      cap_resource[:before] = self.to_ref
+    else
+      source_resource = nil
+      # XXX No support for a dependency array
+      [:require, :subscribe].find do |name|
+        next unless ref = self[name]
+        source_resource = catalog.resource(ref.type, ref.title) || raise("Could not find required resource from #{name}")
+      end
+
+      # Yuck.  Look through all known resources for a dependency :/
+      # XXX No support for a dependency array
+      unless source_resource
+        catalog.resources.each do |resource|
+          [:before, :notify].each do
+            next unless ref = resource[name]
+            source_resource = catalog.resource(ref.type, ref.title) || raise("Could not find required resource from #{name}")
+          end
+        end
+      end
+
+      if source_resource
+        unless source_resource.resource_type.produces[0] == resource_type.consumes[0]
+          raise "Source resource #{source_resource} produces #{source_resource.resource_type.produces[0]} but #{self} consumes #{resource_type.consumes[0]}"
+        end
+        cap_resource = source_resource.capability_resource
+      else
+        puts "No capabilities for #{self}"
+        return
+      end
     end
-
-    # Add the capability as a dependency for the consuming resource.
-    cap_resource[:before] = self.to_ref
 
     map = {}
     if values
