@@ -279,12 +279,14 @@ class Puppet::Parser::Resource < Puppet::Resource
   end
 
   def get_capability_from_puppetdb(consumes)
-    # curl -G -H "Accept: application/json" 'http://localhost:8080/resources' --data-urlencode 'query=["=", "type", "Sql"]' | python -mjson.tool
     require 'net/http'
-    params = {:query => '["and", ["=", "type", "%s"], ["=", "title", "%s"]]' % [consumes.type, consumes.title]}
+    require 'cgi'
+    http = Net::HTTP.new("localhost", 8080)
     query = '["and", ["=", "type", "%s"], ["=", "title", "%s"]]' % [consumes.type, consumes.title]
-    curl = "curl -G -H 'Accept: application/json' 'http://localhost:8080/resources' --data-urlencode 'query=#{query}'"
-    json = `#{curl}`
+    response = http.get("/resources?query=%s" % CGI.escape(query), { "Accept" => 'application/json'})
+
+    json = response.body
+
     data = PSON.parse(json)
     return nil if data.empty?
 
