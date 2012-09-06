@@ -278,6 +278,34 @@ class Puppet::Parser::Resource < Puppet::Resource
     catalog.add_resource cap_resource
   end
 
+  def get_capability_from_puppetdb(consumes)
+    # curl -G -H "Accept: application/json" 'http://localhost:8080/resources' --data-urlencode 'query=["=", "type", "Sql"]' | python -mjson.tool
+    require 'net/http'
+    params = {:query => '["and", ["=", "type", "%s"], ["=", "title", "%s"]]' % [consumes.type, consumes.title]}
+    query = '["and", ["=", "type", "%s"], ["=", "title", "%s"]]' % [consumes.type, consumes.title]
+    curl = "curl -G -H 'Accept: application/json' 'http://localhost:8080/resources' --data-urlencode 'query=#{query}'"
+    json = `#{curl}`
+    data = PSON.parse(json)
+    return nil if data.empty?
+
+    # turn data into resource
+    data.each do |hash|
+      next unless params = hash["parameters"]
+      resource = Puppet::Resource.new(hash["type"], hash["title"])
+      real_type = Puppet::Type.type(resource.type) || raise("Could not find resource type #{resource.type}")
+      real_type.parameters.each do |param|
+        param = param.to_s
+        next if param == "name"
+        if value = params[param]
+          resource[param] = value
+        else
+          Puppet.debug "No capability value for #{resource}->#{param}"
+        end
+      end
+      return resource
+    end
+  end
+
   def add_capability_parameters
     return unless resource_type.consumes
     cap_type, values = resource_type.consumes
@@ -285,10 +313,9 @@ class Puppet::Parser::Resource < Puppet::Resource
     # This tells us that they actually want the capability sought,
     # and also what name to look for
     if consumes = self[:consume]
-
-      unless cap_resource = catalog.resource(cap_type, consumes.title)
+      unless cap_resource = catalog.resource(cap_type, consumes.title) or cap_resource = get_capability_from_puppetdb(consumes)
         catalog.resources.each { |res| puts "=> #{res.ref}" }
-        raise "Could not find capability #{cap_type/self.name} for #{self}"
+        raise "Could not find capability #{cap_type}[#{self.name}] for #{self}"
       end
 
       # Add the capability as a dependency for the consuming resource.
