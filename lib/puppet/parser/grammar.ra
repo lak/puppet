@@ -720,6 +720,7 @@ capability: PRODUCES name argumentlist {
   | CONSUMES name argumentlist {
   result = {:name => val[1].value, :values => val[2], :type => :consumes}
 }
+  | nil
 
 nodeparent:       nil
   | INHERITS hostname {
