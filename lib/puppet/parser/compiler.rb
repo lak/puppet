@@ -375,7 +375,9 @@ class Puppet::Parser::Compiler
 
     names = []
     Puppet::Type.eachmetaparam do |name|
-      next if Puppet::Parser::Resource.relationship_parameter?(name)
+      # We don't want relationships or consume/produce info to cascade to contained resources
+      # that's just duplication.
+      next if Puppet::Parser::Resource.relationship_parameter?(name) or [:consume, :produce].include?(name)
       names << name
     end
 

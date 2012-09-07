@@ -273,7 +273,7 @@ class Puppet::Parser::Resource < Puppet::Resource
     cap_resource = capability_resource(produces.title)
 
     # Add the producing resource as a dependency
-    cap_resource[:require] = self.to_ref
+    self[:before] = cap_resource
 
     catalog.add_resource cap_resource
   end
@@ -321,7 +321,12 @@ class Puppet::Parser::Resource < Puppet::Resource
       end
 
       # Add the capability as a dependency for the consuming resource.
-      cap_resource[:before] = self.to_ref
+      self[:require] = cap_resource
+
+      # And to the catalog, if it happens to be a remote one
+      unless catalog.resource(cap_resource)
+        catalog.add_resource(cap_resource)
+      end
     else
       source_resource = nil
       # XXX No support for a dependency array

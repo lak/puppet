@@ -62,7 +62,6 @@ class Puppet::Indirector::REST < Puppet::Indirector::Terminus
       end
     else
       # Raise the http error if we didn't get a 'success' of some kind.
-      p response
       raise convert_to_http_error(response)
     end
   end
