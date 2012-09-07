@@ -324,7 +324,7 @@ class Puppet::Parser::Resource < Puppet::Resource
       self[:require] = cap_resource
 
       # And to the catalog, if it happens to be a remote one
-      unless catalog.resource(cap_resource)
+      unless catalog.resource(cap_resource.ref)
         catalog.add_resource(cap_resource)
       end
     else
